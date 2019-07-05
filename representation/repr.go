@@ -2,6 +2,7 @@ package representation
 
 import (
 	"fmt"
+	"math/big"
 	"math/bits"
 	"strings"
 )
@@ -272,7 +273,41 @@ func (fe *Fp) MulAssign(other *Fp) {
 	fe.repr.mont_mul_assign(other.repr, fe.field.modulus, fe.field.montInv)
 }
 
+func (fe *Fp) Square() {
+	fe.repr.mont_square(fe.field.modulus, fe.field.montInv)
+}
+
 func (fe *Fp) IntoRepr() Representation {
 	result := fe.repr.into_normal_repr(fe.field.modulus, fe.field.montInv)
+	return result
+}
+
+func One(field *FieldParams) Fp {
+	new := Fp{
+		repr:  field.montR,
+		field: field,
+	}
+	return new
+}
+
+func (fe *Fp) Clone() Fp {
+	new := Fp{
+		repr:  fe.repr,
+		field: fe.field,
+	}
+
+	return new
+}
+
+func (fe *Fp) Pow(exponent *big.Int) Fp {
+	result := One(fe.field)
+	bitlength := exponent.BitLen()
+	for i := bitlength - 1; i >= 0; i-- {
+		result.Square()
+		if exponent.Bit(i) == 1 {
+			result.MulAssign(fe)
+		}
+	}
+
 	return result
 }

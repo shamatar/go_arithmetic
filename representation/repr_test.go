@@ -186,3 +186,103 @@ func TestBN254BaseField(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestBN254BaseFieldPow(t *testing.T) {
+	modulus := big.NewInt(0)
+	modulus.SetString("21888242871839275222246405745257275088696311157297823662689037894645226208583", 10)
+
+	montBits := uint(256)
+	montR := big.NewInt(1)
+	montR = big.NewInt(0).Lsh(montR, montBits)
+	montR = big.NewInt(0).Mod(montR, modulus)
+	montR2 := big.NewInt(0).Mul(montR, montR)
+	montR2 = big.NewInt(0).Mod(montR2, modulus)
+
+	var u256Modulus U256
+	var u256R U256
+	var u256R2 U256
+	for i := 0; i < M; i++ {
+		u256Modulus[i] = modulus.Uint64()
+		u256R[i] = montR.Uint64()
+		u256R2[i] = montR2.Uint64()
+		modulus = modulus.Rsh(modulus, 64)
+		montR = montR.Rsh(montR, 64)
+		montR2 = montR2.Rsh(montR2, 64)
+	}
+	inv := uint64(1)
+	for i := 0; i < 63; i++ {
+		inv = inv * inv
+		inv = inv * u256Modulus[0]
+	}
+	inv = (^inv) + 1
+
+	var three U256
+	three[0] = 3
+
+	params := FieldParams{
+		modulus: &u256Modulus,
+		montR:   &u256R,
+		montR2:  &u256R2,
+		montInv: inv,
+	}
+
+	fe_three := three.IntoFp(&params)
+	exponent := big.NewInt(0)
+	exponent.SetString("21888242871839275222246405745257275088696311157297823662689037894645226208582", 10)
+
+	p := fe_three.Pow(exponent)
+
+	result := p.IntoRepr()
+	res := result.(*U256)
+	if res[0] != 1 {
+		t.Fail()
+	}
+}
+
+func BenchmarkBN254BaseFieldPow(b *testing.B) {
+	modulus := big.NewInt(0)
+	modulus.SetString("21888242871839275222246405745257275088696311157297823662689037894645226208583", 10)
+
+	montBits := uint(256)
+	montR := big.NewInt(1)
+	montR = big.NewInt(0).Lsh(montR, montBits)
+	montR = big.NewInt(0).Mod(montR, modulus)
+	montR2 := big.NewInt(0).Mul(montR, montR)
+	montR2 = big.NewInt(0).Mod(montR2, modulus)
+
+	var u256Modulus U256
+	var u256R U256
+	var u256R2 U256
+	for i := 0; i < M; i++ {
+		u256Modulus[i] = modulus.Uint64()
+		u256R[i] = montR.Uint64()
+		u256R2[i] = montR2.Uint64()
+		modulus = modulus.Rsh(modulus, 64)
+		montR = montR.Rsh(montR, 64)
+		montR2 = montR2.Rsh(montR2, 64)
+	}
+	inv := uint64(1)
+	for i := 0; i < 63; i++ {
+		inv = inv * inv
+		inv = inv * u256Modulus[0]
+	}
+	inv = (^inv) + 1
+
+	var three U256
+	three[0] = 3
+
+	params := FieldParams{
+		modulus: &u256Modulus,
+		montR:   &u256R,
+		montR2:  &u256R2,
+		montInv: inv,
+	}
+
+	fe_three := three.IntoFp(&params)
+	exponent := big.NewInt(0)
+	exponent.SetString("21888242871839275222246405745257275088696311157297823662689037894645226208582", 10)
+
+	for i := 0; i < b.N; i++ {
+		_ = fe_three.Pow(exponent)
+	}
+}
