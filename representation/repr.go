@@ -6,15 +6,10 @@ import (
 	"strings"
 )
 
-type representation interface {
-	// String() string
-	// asVec() []uint64
-}
-
-type representation_arith interface {
+type Representation interface {
 	num_libs() uint64
-	sub_noborrow(representation)
-	add_nocarry(representation)
+	sub_noborrow(Representation)
+	add_nocarry(Representation)
 	num_bits() uint32
 	is_zero() bool
 	is_odd() bool
@@ -23,9 +18,9 @@ type representation_arith interface {
 	// shr(uint32)
 	mul2()
 	// shl(uint32)
-	mont_mul_assign(representation, representation, uint64)
-	mont_square(representation, uint64)
-	into_normal_repr(representation, uint64) representation
+	mont_mul_assign(Representation, Representation, uint64)
+	mont_square(Representation, uint64)
+	into_normal_repr(Representation, uint64) Representation
 }
 
 // M ...
@@ -60,7 +55,7 @@ func (repr *U256) num_libs() uint64 {
 	return M
 }
 
-func (repr *U256) sub_noborrow(oth representation) {
+func (repr *U256) sub_noborrow(oth Representation) {
 	other, _ := oth.(*U256)
 	borrow := uint64(0)
 	for i := 0; i < M; i++ {
@@ -68,15 +63,7 @@ func (repr *U256) sub_noborrow(oth representation) {
 	}
 }
 
-// func (repr *U256) sub_noborrow(oth representation) {
-// 	other, _ := oth.(*U256)
-// 	borrow := uint64(0)
-// 	for i := 0; i < M; i++ {
-// 		repr[i], borrow = bits.Sub64(repr[i], other[i], borrow)
-// 	}
-// }
-
-func (repr *U256) add_nocarry(oth representation) {
+func (repr *U256) add_nocarry(oth Representation) {
 	other, _ := oth.(*U256)
 	carry := uint64(0)
 	for i := 0; i < M; i++ {
@@ -150,20 +137,20 @@ func mac_with_carry(a, b, c, carry uint64) (uint64, uint64) {
 	return sum_ab_and_carry, m_hi
 }
 
-func (repr *U256) mont_mul_assign(oth representation, modul representation, mont_inv uint64) {
+func (repr *U256) mont_mul_assign(oth Representation, modul Representation, mont_inv uint64) {
 	other, _ := oth.(*U256)
 	modulus, _ := modul.(*U256)
 	interm := repr.MulImpl(other)
 	repr.mont_reduce(interm, modulus, mont_inv)
 }
 
-func (repr *U256) mont_square(modul representation, mont_inv uint64) {
+func (repr *U256) mont_square(modul Representation, mont_inv uint64) {
 	modulus, _ := modul.(*U256)
 	interm := repr.MulImpl(repr)
 	repr.mont_reduce(interm, modulus, mont_inv)
 }
 
-func (repr *U256) MulImpl(oth representation) U256MulResult {
+func (repr *U256) MulImpl(oth Representation) U256MulResult {
 	other, _ := oth.(*U256)
 	var result U256MulResult
 	for k := 0; k < M; k++ {
@@ -244,7 +231,7 @@ func (repr *U256) SquareImpl() U256MulResult {
 	return result
 }
 
-func (repr *U256) into_normal_repr(modul representation, mont_inv uint64) representation {
+func (repr *U256) into_normal_repr(modul Representation, mont_inv uint64) Representation {
 	modulus, _ := modul.(*U256)
 	var interm U256MulResult
 	var result U256
@@ -253,18 +240,18 @@ func (repr *U256) into_normal_repr(modul representation, mont_inv uint64) repres
 	}
 	result.mont_reduce(interm, modulus, mont_inv)
 
-	return result
+	return &result
 }
 
 type Fp struct {
-	repr  representation_arith
+	repr  Representation
 	field *FieldParams
 }
 
 type FieldParams struct {
-	modulus representation
-	montR   representation
-	montR2  representation
+	modulus Representation
+	montR   Representation
+	montR2  Representation
 	montInv uint64
 }
 
@@ -285,7 +272,7 @@ func (fe *Fp) MulAssign(other *Fp) {
 	fe.repr.mont_mul_assign(other.repr, fe.field.modulus, fe.field.montInv)
 }
 
-func (fe *Fp) IntoRepr() representation {
+func (fe *Fp) IntoRepr() Representation {
 	result := fe.repr.into_normal_repr(fe.field.modulus, fe.field.montInv)
 	return result
 }

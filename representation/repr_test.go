@@ -181,7 +181,7 @@ func TestBN254BaseField(t *testing.T) {
 	fe_three := three.IntoFp(&params)
 	fe_two.MulAssign(&fe_three)
 	result := fe_two.IntoRepr()
-	res := result.(U256)
+	res := result.(*U256)
 	if res[0] != 6 {
 		t.Fail()
 	}
