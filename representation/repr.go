@@ -257,14 +257,35 @@ func (repr *U256) into_normal_repr(modul representation, mont_inv uint64) repres
 }
 
 type Fp struct {
-	repr representation_arith
+	repr  representation_arith
+	field *FieldParams
 }
 
-func (repr U256) IntoFp(modulus, montR2 *U256, mont_inv uint64) Fp {
+type FieldParams struct {
+	modulus representation
+	montR   representation
+	montR2  representation
+	montInv uint64
+}
+
+func (repr U256) IntoFp(field *FieldParams) Fp {
+	modulus := field.modulus.(*U256)
+	montR2 := field.montR2.(*U256)
+	mont_inv := field.montInv
 	repr.mont_mul_assign(montR2, modulus, mont_inv)
 	fe := Fp{
-		repr: &repr,
+		repr:  &repr,
+		field: field,
 	}
 
 	return fe
+}
+
+func (fe *Fp) MulAssign(other *Fp) {
+	fe.repr.mont_mul_assign(other.repr, fe.field.modulus, fe.field.montInv)
+}
+
+func (fe *Fp) IntoRepr() representation {
+	result := fe.repr.into_normal_repr(fe.field.modulus, fe.field.montInv)
+	return result
 }
