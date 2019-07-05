@@ -2,7 +2,6 @@ package representation
 
 import (
 	"fmt"
-	"math/big"
 	"math/bits"
 	"strings"
 )
@@ -299,13 +298,23 @@ func (fe *Fp) Clone() Fp {
 	return new
 }
 
-func (fe *Fp) Pow(exponent *big.Int) Fp {
+func (fe *Fp) Pow(exponent []uint64) Fp {
 	result := One(fe.field)
-	bitlength := exponent.BitLen()
-	for i := bitlength - 1; i >= 0; i-- {
-		result.Square()
-		if exponent.Bit(i) == 1 {
-			result.MulAssign(fe)
+	found_one := false
+
+	for word := len(exponent) - 1; word >= 0; word-- {
+		w := exponent[word]
+		for bit := 63; bit >= 0; bit-- {
+			mask := uint64(1) << uint64(bit)
+			thisBit := w&mask > 0
+			if found_one {
+				result.Square()
+			} else {
+				found_one = thisBit
+			}
+			if thisBit {
+				result.MulAssign(fe)
+			}
 		}
 	}
 

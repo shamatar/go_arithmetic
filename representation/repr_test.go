@@ -227,10 +227,15 @@ func TestBN254BaseFieldPow(t *testing.T) {
 	}
 
 	fe_three := three.IntoFp(&params)
+	var exponentRepr U256
 	exponent := big.NewInt(0)
 	exponent.SetString("21888242871839275222246405745257275088696311157297823662689037894645226208582", 10)
+	for i := 0; i < M; i++ {
+		exponentRepr[i] = exponent.Uint64()
+		exponent = exponent.Rsh(exponent, 64)
+	}
 
-	p := fe_three.Pow(exponent)
+	p := fe_three.Pow(exponentRepr[:])
 
 	result := p.IntoRepr()
 	res := result.(*U256)
@@ -279,10 +284,15 @@ func BenchmarkBN254BaseFieldPow(b *testing.B) {
 	}
 
 	fe_three := three.IntoFp(&params)
+
+	var exponentRepr U256
 	exponent := big.NewInt(0)
 	exponent.SetString("21888242871839275222246405745257275088696311157297823662689037894645226208582", 10)
-
+	for i := 0; i < M; i++ {
+		exponentRepr[i] = exponent.Uint64()
+		exponent = exponent.Rsh(exponent, 64)
+	}
 	for i := 0; i < b.N; i++ {
-		_ = fe_three.Pow(exponent)
+		_ = fe_three.Pow(exponentRepr[:])
 	}
 }
